@@ -54,6 +54,6 @@
 ## 開発を始めるとき
 
 仮想環境の使用を終了する場合は、以下のコマンドを使用します：
-deactivate
+`deactivate`
 また、プロジェクトで作業を再開する際は、仮想環境を再度アクティブにする必要があります：
-source venv/bin/activate
+`source venv/bin/activate`
