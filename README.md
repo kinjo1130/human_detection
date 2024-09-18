@@ -1,21 +1,22 @@
 ## 環境構築に使ってコマンドリスト
- history
- 1082  brew -v
- 1083  python -v
- 1084  whitch python
- 1085  which python
- 1086  pyenv --version
- 1087  python3 -m venv pytorch_env
- 1088  pip3 install --upgrade pip
- 1089  source venv/bin/activate
- 1090  python3 -m venv venv
- 1091  source venv/bin/activate\n\n
- 1092  source venv/bin/activate
- 1093  pip install --upgrade pip
- 1094  pip install torch torchvision torchaudio
- 1095  python -c "import torch; print(torch.__version__)" // pytorchのversionを確認する
- 1096  python3 version
- 1097  python3 --version
+# Command History
+
+1. `brew -v`
+2. `python -v`
+3. `whitch python`
+4. `which python`
+5. `pyenv --version`
+6. `python3 -m venv pytorch_env`
+7. `pip3 install --upgrade pip`
+8. `source venv/bin/activate`
+9. `python3 -m venv venv`
+10. `source venv/bin/activate`
+11. `source venv/bin/activate`
+12. `pip install --upgrade pip`
+13. `pip install torch torchvision torchaudio`
+14. `python -c "import torch; print(torch.__version__)"` // pytorchのversionを確認する
+15. `python3 version`
+16. `python3 --version`
 
 ## 環境
 - pytorch version: 2.4.1
@@ -37,12 +38,14 @@
 使用しているツール：
 - Python 3 の標準ライブラリに含まれる `venv` モジュール
 
-`venv` は以下の役割を果たします：
+`venv` は以下の役目
 
 1. 独立した Python 環境を作成します。
 2. その環境専用の Python バイナリをコピーまたはシンボリックリンクします。
 3. 環境をアクティブ化するためのスクリプトを作成します。
 4. （オプションで）基本的なパッケージ（pip など）をインストールします。
+
+要は仮想環境を作って、pythonの実行環境を作ってくれる、Google Colabなどを使わなくてもいいし、他のPythonのプロジェクトのversionの衝突を防ぐことができる
 
 この仮想環境を使用することで、プロジェクト固有の依存関係を他のプロジェクトやシステム全体の Python 環境から分離できます。これにより、異なるプロジェクト間での依存関係の衝突を防ぎ、クリーンで再現可能な開発環境を維持することができます。
 
