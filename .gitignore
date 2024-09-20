@@ -4,6 +4,11 @@ env/
 pytorch_env/
 *.pyc
 __pycache__/
+training.py
+
+runs/
+yolov8-trash-detections.v6i.yolov8/
+
 
 # PyTorch model files
 *.pt

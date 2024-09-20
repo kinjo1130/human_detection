@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 # YOLOv8モデルの読み込み
-model = YOLO('yolov8n-seg.pt')
+model = YOLO('yolov8n.pt')
 
 # ビデオの読み込み（ここではカメラを使用。ファイルを使用する場合は引数をファイルパスに変更）
 cap = cv2.VideoCapture(0)
