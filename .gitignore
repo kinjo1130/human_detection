@@ -8,7 +8,8 @@ training.py
 
 runs/
 yolov8-trash-detections.v6i.yolov8/
-
+target_persons/
+image/
 
 # PyTorch model files
 *.pt
