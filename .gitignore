@@ -6,9 +6,11 @@ pytorch_env/
 __pycache__/
 training.py
 
+analysis_results/
+images/
+
 runs/
 yolov8-trash-detections.v6i.yolov8/
-target_persons/
 image/
 
 # PyTorch model files
