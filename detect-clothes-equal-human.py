@@ -23,36 +23,47 @@ def extract_clothing_features(img):
                 x1, y1, x2, y2 = box.xyxy[0]
                 x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
                 
-                # 服の領域を推定（上半身全体を対象に）
                 height = y2 - y1
-                clothing_y1 = y1 + height // 8  # 上端を少し上げる
-                clothing_y2 = y1 + height // 2 + height // 4  # 下端を少し下げる
-                clothing_region = img[clothing_y1:clothing_y2, x1:x2]
+                # 上半身の領域
+                upper_y1 = y1
+                upper_y2 = y1 + height // 2
+                upper_region = img[upper_y1:upper_y2, x1:x2]
                 
-                if clothing_region.size == 0:
+                # 下半身の領域
+                lower_y1 = y1 + height // 2
+                lower_y2 = y2
+                lower_region = img[lower_y1:lower_y2, x1:x2]
+                
+                if upper_region.size == 0 or lower_region.size == 0:
                     continue
                 
-                # RGBの中央値を計算
-                rgb_median = np.median(clothing_region, axis=(0, 1))
+                # 上半身のRGBとHSVの中央値を計算
+                upper_rgb_median = np.median(upper_region, axis=(0, 1))
+                upper_hsv_region = cv2.cvtColor(upper_region, cv2.COLOR_BGR2HSV)
+                upper_hsv_median = np.median(upper_hsv_region, axis=(0, 1))
                 
-                # HSVに変換
-                hsv_region = cv2.cvtColor(clothing_region, cv2.COLOR_BGR2HSV)
-                hsv_median = np.median(hsv_region, axis=(0, 1))
+                # 下半身のRGBとHSVの中央値を計算
+                lower_rgb_median = np.median(lower_region, axis=(0, 1))
+                lower_hsv_region = cv2.cvtColor(lower_region, cv2.COLOR_BGR2HSV)
+                lower_hsv_median = np.median(lower_hsv_region, axis=(0, 1))
                 
-                return np.concatenate([rgb_median, hsv_median]), (x1, clothing_y1, x2, clothing_y2), clothing_region
+                upper_features = np.concatenate([upper_rgb_median, upper_hsv_median])
+                lower_features = np.concatenate([lower_rgb_median, lower_hsv_median])
+                
+                return upper_features, lower_features, (x1, upper_y1, x2, upper_y2), (x1, lower_y1, x2, lower_y2)
     
-    return None, None, None
+    return None, None, None, None
 
 def analyze_clothing(img_path):
     img = cv2.imread(img_path)
     if img is None:
         logging.error(f"'{img_path}' を読み込めませんでした。")
-        return None
+        return None, None
 
-    features, clothing_region, clothing_img = extract_clothing_features(img)
-    if features is None:
+    upper_features, lower_features, upper_region, lower_region = extract_clothing_features(img)
+    if upper_features is None or lower_features is None:
         logging.warning(f"'{os.path.basename(img_path)}' から服の領域を検出できませんでした。")
-        return None
+        return None, None
 
     # 分析結果を可視化
     plt.figure(figsize=(15, 10))
@@ -65,46 +76,41 @@ def analyze_clothing(img_path):
 
     # 検出された服の領域を表示
     plt.subplot(2, 3, 2)
-    x1, y1, x2, y2 = clothing_region
     img_with_rect = img.copy()
-    cv2.rectangle(img_with_rect, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    cv2.rectangle(img_with_rect, (upper_region[0], upper_region[1]), (upper_region[2], upper_region[3]), (0, 255, 0), 2)
+    cv2.rectangle(img_with_rect, (lower_region[0], lower_region[1]), (lower_region[2], lower_region[3]), (0, 0, 255), 2)
     plt.imshow(cv2.cvtColor(img_with_rect, cv2.COLOR_BGR2RGB))
-    plt.title("Detected Clothing Region")
+    plt.title("Detected Clothing Regions")
     plt.axis('off')
 
-    # 服の領域のみを表示
+    # 上半身の服の領域のみを表示
     plt.subplot(2, 3, 3)
-    plt.imshow(cv2.cvtColor(clothing_img, cv2.COLOR_BGR2RGB))
-    plt.title("Extracted Clothing")
+    upper_clothing = img[upper_region[1]:upper_region[3], upper_region[0]:upper_region[2]]
+    plt.imshow(cv2.cvtColor(upper_clothing, cv2.COLOR_BGR2RGB))
+    plt.title("Extracted Upper Clothing")
     plt.axis('off')
 
-    # RGBヒストグラムを表示
+    # 下半身の服の領域のみを表示
     plt.subplot(2, 3, 4)
-    color = ('b','g','r')
-    for i, col in enumerate(color):
-        histr = cv2.calcHist([clothing_img], [i], None, [256], [0, 256])
-        plt.plot(histr, color=col)
-    plt.title("RGB Histogram")
-    plt.xlabel("Pixel Value")
-    plt.ylabel("Frequency")
+    lower_clothing = img[lower_region[1]:lower_region[3], lower_region[0]:lower_region[2]]
+    plt.imshow(cv2.cvtColor(lower_clothing, cv2.COLOR_BGR2RGB))
+    plt.title("Extracted Lower Clothing")
+    plt.axis('off')
 
-    # HSVヒストグラムを表示
+    # 上半身の代表色を表示
     plt.subplot(2, 3, 5)
-    hsv_img = cv2.cvtColor(clothing_img, cv2.COLOR_BGR2HSV)
-    plt.hist(hsv_img[:,:,0].ravel(), 180, [0, 180], color='r', alpha=0.5, label="Hue")
-    plt.hist(hsv_img[:,:,1].ravel(), 256, [0, 256], color='g', alpha=0.5, label="Saturation")
-    plt.hist(hsv_img[:,:,2].ravel(), 256, [0, 256], color='b', alpha=0.5, label="Value")
-    plt.legend()
-    plt.title("HSV Histogram")
-    plt.xlabel("Pixel Value")
-    plt.ylabel("Frequency")
+    upper_dominant_color = upper_features[:3].astype(int)
+    upper_color_patch = np.full((100, 100, 3), upper_dominant_color, dtype=np.uint8)
+    plt.imshow(upper_color_patch)
+    plt.title(f"Upper Dominant Color: RGB{tuple(upper_dominant_color)}")
+    plt.axis('off')
 
-    # 代表色を表示
+    # 下半身の代表色を表示
     plt.subplot(2, 3, 6)
-    dominant_color = features[:3].astype(int)
-    color_patch = np.full((100, 100, 3), dominant_color, dtype=np.uint8)
-    plt.imshow(color_patch)
-    plt.title(f"Dominant Color: RGB{tuple(dominant_color)}")
+    lower_dominant_color = lower_features[:3].astype(int)
+    lower_color_patch = np.full((100, 100, 3), lower_dominant_color, dtype=np.uint8)
+    plt.imshow(lower_color_patch)
+    plt.title(f"Lower Dominant Color: RGB{tuple(lower_dominant_color)}")
     plt.axis('off')
 
     # 画像を保存
@@ -114,7 +120,7 @@ def analyze_clothing(img_path):
     plt.close()
 
     logging.info(f"分析結果を保存しました: {output_path}")
-    return features
+    return upper_features, lower_features
 
 def load_target_images(image_dir):
     target_features = []
@@ -125,9 +131,12 @@ def load_target_images(image_dir):
         return None
 
     for image_path in image_files:
-        features = analyze_clothing(image_path)
-        if features is not None:
-            target_features.append(features)
+        upper_features, lower_features = analyze_clothing(image_path)
+        if upper_features is not None and lower_features is not None:
+            target_features.append((upper_features, lower_features))
+            logging.info(f"'{os.path.basename(image_path)}' から服の特徴量を抽出しました。")
+        else:
+            logging.warning(f"'{os.path.basename(image_path)}' から服の特徴量を抽出できませんでした。")
 
     if not target_features:
         logging.error("いずれの画像からも服の領域を検出できませんでした。")
@@ -139,19 +148,23 @@ def color_distance(color1, color2):
     return np.sqrt(np.sum((color1 - color2)**2))
 
 def detect_specific_person(frame, target_features, threshold=50):
-    frame_features, clothing_region, _ = extract_clothing_features(frame)
-    if frame_features is None:
+    frame_upper_features, frame_lower_features, upper_region, lower_region = extract_clothing_features(frame)
+    if frame_upper_features is None or frame_lower_features is None:
         return False, None, None, float('inf')
     
     min_distance = float('inf')
-    for i, target in enumerate(target_features):
-        distance = color_distance(frame_features, target)
-        if distance < min_distance:
-            min_distance = distance
-        if distance < threshold:
-            return True, frame_features, clothing_region, min_distance
+    for target_upper, target_lower in target_features:
+        upper_distance = color_distance(frame_upper_features, target_upper)
+        lower_distance = color_distance(frame_lower_features, target_lower)
+        total_distance = (upper_distance + lower_distance) / 2
+        
+        if total_distance < min_distance:
+            min_distance = total_distance
+        
+        if total_distance < threshold:
+            return True, (frame_upper_features, frame_lower_features), (upper_region, lower_region), min_distance
     
-    return False, frame_features, clothing_region, min_distance
+    return False, (frame_upper_features, frame_lower_features), (upper_region, lower_region), min_distance
 
 def take_photo(frame, output_dir):
     if not os.path.exists(output_dir):
@@ -182,11 +195,12 @@ def main():
             logging.error("フレームの取得に失敗しました。")
             break
 
-        person_detected, detected_features, clothing_region, min_distance = detect_specific_person(frame, target_features)
+        person_detected, detected_features, clothing_regions, min_distance = detect_specific_person(frame, target_features)
 
-        if clothing_region:
-            x1, y1, x2, y2 = clothing_region
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        if clothing_regions:
+            upper_region, lower_region = clothing_regions
+            cv2.rectangle(frame, (upper_region[0], upper_region[1]), (upper_region[2], upper_region[3]), (0, 255, 0), 2)
+            cv2.rectangle(frame, (lower_region[0], lower_region[1]), (lower_region[2], lower_region[3]), (0, 0, 255), 2)
 
         if person_detected:
             cv2.putText(frame, "Target Person", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
